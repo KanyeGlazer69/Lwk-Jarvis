@@ -17,7 +17,7 @@ import mss
 
 try:
     import pystray
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageTk
 except ImportError:
     pystray = None
 
@@ -25,6 +25,13 @@ except ImportError:
 ROOT = pathlib.Path(os.environ["LOCALAPPDATA"]) / "Jarvis"
 RUNNER = ROOT / "Phase4" / "Run-Jarvis-Phase4.ps1"
 MUTEX_NAME = "Local\\JarvisDesktopApp-Adrian"
+MARBLE = pathlib.Path(__file__).resolve().parent / "assets" / "black-gold-marble.png"
+BLACK = "#050505"
+PANEL = "#0b0b0d"
+GOLD = "#c9a24b"
+GOLD_BRIGHT = "#e4c56a"
+IVORY = "#f5f1e8"
+MUTED = "#aaa49a"
 
 
 class JarvisApp:
@@ -37,7 +44,7 @@ class JarvisApp:
         y = monitor["top"] + monitor["height"] - height - margin
         self.root.geometry(f"{width}x{height}+{x}+{y}")
         self.root.minsize(620, 420)
-        self.root.configure(bg="#09111f")
+        self.root.configure(bg=BLACK)
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
         self.process: subprocess.Popen[str] | None = None
         self.events: queue.Queue[tuple[str, str]] = queue.Queue()
@@ -50,40 +57,52 @@ class JarvisApp:
         self.root.after(350, self.start)
 
     def _build(self) -> None:
-        title = tk.Label(self.root, text="J A R V I S", font=("Segoe UI Semibold", 26),
-                         fg="#71e8ff", bg="#09111f")
-        title.pack(pady=(24, 4))
+        if MARBLE.is_file():
+            texture = Image.open(MARBLE).convert("RGB").resize((760, 520), Image.Resampling.LANCZOS)
+            self.marble_photo = ImageTk.PhotoImage(texture)
+            tk.Label(self.root, image=self.marble_photo, borderwidth=0).place(x=0, y=0, relwidth=1, relheight=1)
+        title = tk.Label(self.root, text="J  A  R  V  I  S", font=("Georgia", 27, "bold"),
+                         fg=GOLD_BRIGHT, bg=BLACK)
+        title.pack(pady=(20, 1))
+        tk.Label(self.root, text="P E R S O N A L   I N T E L L I G E N C E", font=("Segoe UI", 7),
+                 fg=IVORY, bg=BLACK).pack(pady=(0, 4))
         self.status = tk.StringVar(value="OFFLINE")
-        tk.Label(self.root, textvariable=self.status, font=("Segoe UI", 11),
-                 fg="#8a9ab5", bg="#09111f").pack(pady=(0, 20))
+        tk.Label(self.root, textvariable=self.status, font=("Segoe UI Semibold", 9),
+                 fg=MUTED, bg=BLACK).pack(pady=(0, 13))
 
-        card = tk.Frame(self.root, bg="#111d30", padx=20, pady=16)
+        card = tk.Frame(self.root, bg=PANEL, padx=22, pady=16, highlightthickness=1,
+                        highlightbackground=GOLD)
         card.pack(fill="x", padx=28)
-        tk.Label(card, text="YOU", font=("Segoe UI Semibold", 9), fg="#7188a8",
-                 bg="#111d30").pack(anchor="w")
+        tk.Label(card, text="YOU", font=("Segoe UI Semibold", 8), fg=GOLD, bg=PANEL).pack(anchor="w")
         self.heard = tk.StringVar(value="Say “Hey Jarvis” when the status is Ready.")
         tk.Label(card, textvariable=self.heard, wraplength=675, justify="left",
-                 font=("Segoe UI", 13), fg="#eef6ff", bg="#111d30").pack(anchor="w", pady=(4, 14))
-        tk.Label(card, text="JARVIS", font=("Segoe UI Semibold", 9), fg="#71e8ff",
-                 bg="#111d30").pack(anchor="w")
+                 font=("Segoe UI", 12), fg=IVORY, bg=PANEL).pack(anchor="w", pady=(4, 13))
+        tk.Frame(card, bg="#332b1b", height=1).pack(fill="x", pady=(0, 12))
+        tk.Label(card, text="JARVIS", font=("Segoe UI Semibold", 8), fg=GOLD_BRIGHT, bg=PANEL).pack(anchor="w")
         self.answer = tk.StringVar(value="Starting up…")
         tk.Label(card, textvariable=self.answer, wraplength=675, justify="left",
-                 font=("Segoe UI", 13), fg="#eef6ff", bg="#111d30").pack(anchor="w", pady=(4, 0))
+                 font=("Segoe UI", 12), fg=IVORY, bg=PANEL).pack(anchor="w", pady=(4, 0))
 
-        buttons = tk.Frame(self.root, bg="#09111f")
-        buttons.pack(pady=18)
+        buttons = tk.Frame(self.root, bg=BLACK)
+        buttons.pack(pady=14)
         self.start_button = tk.Button(buttons, text="Start", width=12, command=self.start,
-                                      bg="#167d91", fg="white", relief="flat", font=("Segoe UI", 10))
+                                      bg=GOLD, fg=BLACK, activebackground=GOLD_BRIGHT,
+                                      relief="flat", font=("Segoe UI Semibold", 9), cursor="hand2")
         self.start_button.pack(side="left", padx=6)
         self.stop_button = tk.Button(buttons, text="Stop", width=12, command=self.stop,
-                                     bg="#25344d", fg="white", relief="flat", font=("Segoe UI", 10))
+                                     bg=BLACK, fg=IVORY, activebackground="#201b12",
+                                     highlightthickness=1, highlightbackground=GOLD,
+                                     relief="flat", font=("Segoe UI", 9), cursor="hand2")
         self.stop_button.pack(side="left", padx=6)
         tk.Button(buttons, text="Hide to tray", width=12, command=self.hide_window,
-                  bg="#25344d", fg="white", relief="flat", font=("Segoe UI", 10)).pack(side="left", padx=6)
+                  bg=BLACK, fg=IVORY, activebackground="#201b12",
+                  highlightthickness=1, highlightbackground=GOLD,
+                  relief="flat", font=("Segoe UI", 9), cursor="hand2").pack(side="left", padx=6)
 
-        self.log = tk.Text(self.root, height=8, bg="#070d17", fg="#7990ad", insertbackground="white",
-                           relief="flat", font=("Consolas", 9), state="disabled", padx=12, pady=10)
-        self.log.pack(fill="both", expand=True, padx=28, pady=(0, 24))
+        self.log = tk.Text(self.root, height=7, bg="#080808", fg=MUTED, insertbackground=GOLD,
+                           highlightthickness=1, highlightbackground="#3a3020",
+                           relief="flat", font=("Consolas", 9), state="disabled", padx=12, pady=9)
+        self.log.pack(fill="both", expand=True, padx=28, pady=(0, 20))
 
     @staticmethod
     def _smallest_monitor() -> dict:
@@ -101,28 +120,29 @@ class JarvisApp:
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Jarvis transcript")
         self.popup.geometry(f"{width}x{height}+{x}+{y}")
-        self.popup.configure(bg="#0b1626")
+        self.popup.configure(bg=BLACK)
         self.popup.overrideredirect(True)
         self.popup.attributes("-topmost", True)
         self.popup.attributes("-alpha", 0.94)
-        tk.Frame(self.popup, bg="#71e8ff", width=4).pack(side="left", fill="y")
-        body = tk.Frame(self.popup, bg="#0b1626", padx=14, pady=11)
+        tk.Frame(self.popup, bg=GOLD, width=4).pack(side="left", fill="y")
+        body = tk.Frame(self.popup, bg=BLACK, padx=14, pady=11,
+                        highlightthickness=1, highlightbackground="#3a3020")
         body.pack(side="left", fill="both", expand=True)
         self.popup_status = tk.StringVar(value="JARVIS · STARTING")
         tk.Label(body, textvariable=self.popup_status, font=("Segoe UI Semibold", 9),
-                 fg="#71e8ff", bg="#0b1626").pack(anchor="w")
+                 fg=GOLD_BRIGHT, bg=BLACK).pack(anchor="w")
         self.popup_text = tk.StringVar(value="Waiting for “Hey Jarvis”…")
         tk.Label(body, textvariable=self.popup_text, wraplength=345, justify="left",
-                 font=("Segoe UI", 12), fg="#f1f7ff", bg="#0b1626").pack(anchor="w", pady=(7, 0))
+                 font=("Segoe UI", 12), fg=IVORY, bg=BLACK).pack(anchor="w", pady=(7, 0))
         self.popup.bind("<Button-1>", lambda _event: self.show_window())
 
     def _create_tray(self) -> None:
         if pystray is None:
             return
-        image = Image.new("RGBA", (64, 64), "#09111f")
+        image = Image.new("RGBA", (64, 64), BLACK)
         draw = ImageDraw.Draw(image)
-        draw.ellipse((5, 5, 59, 59), outline="#71e8ff", width=5)
-        draw.ellipse((25, 25, 39, 39), fill="#71e8ff")
+        draw.ellipse((5, 5, 59, 59), outline=GOLD, width=5)
+        draw.ellipse((25, 25, 39, 39), fill=GOLD_BRIGHT)
         menu = pystray.Menu(
             pystray.MenuItem("Show Jarvis", lambda: self.root.after(0, self.show_window), default=True),
             pystray.MenuItem("Start", lambda: self.root.after(0, self.start)),
@@ -135,10 +155,11 @@ class JarvisApp:
     def _set_status(self, value: str) -> None:
         self.status.set(value)
         self.popup_status.set(f"JARVIS · {value}")
-        colors = {"READY": "#69f0ae", "THINKING": "#ffd166", "STARTING": "#71e8ff", "OFFLINE": "#8a9ab5"}
+        colors = {"READY": GOLD_BRIGHT, "LISTENING": IVORY, "THINKING": GOLD,
+                  "STARTING": GOLD, "OFFLINE": MUTED}
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Label) and widget.cget("textvariable") == str(self.status):
-                widget.configure(fg=colors.get(value, "#71e8ff"))
+                widget.configure(fg=colors.get(value, GOLD))
 
     def _append_log(self, line: str) -> None:
         self.log.configure(state="normal")
