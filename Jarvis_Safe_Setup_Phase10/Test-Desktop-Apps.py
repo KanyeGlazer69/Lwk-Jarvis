@@ -9,6 +9,8 @@ allowed = [
     "search up Microsoft on OperaGX", "google weather using Opera GX",
     "go to github.com on OperaGX", "open up OperaGX",
     "Can't Tell Me Nothing by Kanye West", "Billie Jean by Michael Jackson",
+    "play the mood playlist",
+    "play the Graduation album by Kanye West", "play album Thriller by Michael Jackson",
 ]
 for phrase in allowed:
     result = handle_action(phrase, dry_run=True)

@@ -3,6 +3,7 @@ param(
     [string]$Query = '',
     [switch]$Play,
     [switch]$Playlist,
+    [switch]$Album,
     [ValidateSet('Play', 'Pause')][string]$PlaybackAction
 )
 
@@ -86,13 +87,16 @@ if ($Playlist) {
         [System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection
     ) | Out-Null
     $selection.Select()
+    $libraryPlaylist.SetFocus()
+    [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
     Start-Sleep -Seconds 2
     $elements = Get-AllElements
     $shuffleButton = $null
     for ($i = 0; $i -lt $elements.Count; $i++) {
         $element = $elements.Item($i)
         if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
-            $element.Current.Name -eq 'Shuffle' -and $element.Current.AutomationId -eq 'ShuffleButton') {
+            $element.Current.Name -eq 'Shuffle' -and
+            $element.Current.AutomationId -in @('ShuffleButton', 'ShuffleButtonElement')) {
             $candidateInvoke = $null
             if ($element.TryGetCurrentPattern(
                 [System.Windows.Automation.InvokePattern]::Pattern, [ref]$candidateInvoke
@@ -136,6 +140,54 @@ $search.SetFocus()
 $valuePattern.SetValue($Query)
 [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
 Start-Sleep -Seconds 2
+
+if ($Album) {
+    $elements = Get-AllElements
+    $albumResult = $null
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        $element = $elements.Item($i)
+        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::ListItem -and
+            $element.Current.Name -match ' Album\s*[·.]') {
+            $candidateInvoke = $null
+            if ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$candidateInvoke)) {
+                $albumResult = $element
+                break
+            }
+        }
+    }
+    if (-not $albumResult) { throw "No public Apple Music album result was found for '$Query'." }
+    $albumName = ($albumResult.Current.Name -split '\s+Album\s*[·.]', 2)[0].Trim()
+    $albumInvoke = $null
+    $albumResult.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$albumInvoke) | Out-Null
+    $albumInvoke.Invoke()
+    Start-Sleep -Seconds 2
+    $elements = Get-AllElements
+    $playButton = $null
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        $element = $elements.Item($i)
+        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+            $element.Current.Name -eq 'Play' -and $element.Current.AutomationId -eq 'PlayButtonElement') {
+            $candidateInvoke = $null
+            if ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$candidateInvoke)) {
+                $playButton = $element
+                break
+            }
+        }
+    }
+    if (-not $playButton) { throw "The Play button for album '$albumName' was not found." }
+    $playInvoke = $null
+    $playButton.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$playInvoke) | Out-Null
+    $playInvoke.Invoke()
+    Start-Sleep -Seconds 2
+    $elements = Get-AllElements
+    $pauseVisible = $false
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        if ($elements.Item($i).Current.Name -eq 'Pause') { $pauseVisible = $true; break }
+    }
+    if (-not $pauseVisible) { throw "Album '$albumName' was selected but playback was not verified." }
+    Write-Output "APPLE_MUSIC_ALBUM_VERIFIED: $albumName"
+    exit 0
+}
 
 if (-not $Play) {
     Write-Output 'APPLE_MUSIC_SEARCH_COMPLETE'
