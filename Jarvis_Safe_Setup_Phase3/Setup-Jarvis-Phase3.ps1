@@ -50,7 +50,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $phase3 $name) -Force
     }
 
-    Write-Host "`n==> Downloading and loading the compact tiny.en model"
+    Write-Host "`n==> Downloading and loading the high-accuracy small.en model"
     Invoke-Checked 'Preparing local speech model' $python @((Join-Path $phase3 'Prepare-Speech-Model.py'))
 
     $finalFree = Get-FreeSpaceGB

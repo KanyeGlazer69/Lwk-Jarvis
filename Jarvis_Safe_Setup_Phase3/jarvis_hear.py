@@ -26,6 +26,7 @@ LAST_TEXT = ROOT / "last-transcript.txt"
 LAST_REPORT = ROOT / "last-transcription.json"
 SAMPLE_RATE = 16_000
 CHUNK = 1_280  # 80 ms; the native openWakeWord frame size.
+SPEECH_MODEL_NAME = "small.en"
 
 
 def load_config() -> dict:
@@ -60,7 +61,7 @@ def create_wake_model() -> WakeModel:
 
 def create_speech_model() -> WhisperModel:
     return WhisperModel(
-        "tiny.en",
+        SPEECH_MODEL_NAME,
         device="cpu",
         compute_type="int8",
         download_root=str(MODEL_ROOT),
@@ -128,8 +129,7 @@ def transcribe(model: WhisperModel, audio: np.ndarray) -> tuple[str, float]:
     segments, _ = model.transcribe(
         audio,
         language="en",
-        beam_size=1,
-        best_of=1,
+        beam_size=5,
         vad_filter=True,
         condition_on_previous_text=False,
         without_timestamps=True,
@@ -141,7 +141,7 @@ def transcribe(model: WhisperModel, audio: np.ndarray) -> tuple[str, float]:
 def run(once: bool) -> int:
     config = load_config()
     wake_model = create_wake_model()
-    print("Loading the local tiny.en speech model...")
+    print(f"Loading the local {SPEECH_MODEL_NAME} high-accuracy speech model...")
     speech_model = create_speech_model()
     audio_queue: queue.Queue[np.ndarray] = queue.Queue(maxsize=64)
     recent_energy: collections.deque[float] = collections.deque(maxlen=125)
