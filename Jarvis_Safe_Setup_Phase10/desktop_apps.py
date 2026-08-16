@@ -172,7 +172,7 @@ def _apple_music(transcript: str, dry_run: bool) -> Result:
         playlist = playlist_match.group(1).strip()
         if not dry_run and not _music_playlist(playlist):
             return Result(True, False, "music.play_playlist", f"I couldn't play your {playlist} playlist.")
-        return Result(True, True, "music.play_playlist", f"Playing your {playlist} playlist.")
+        return Result(True, True, "music.play_playlist", f"Shuffling your {playlist} playlist.")
     play_request = False
     match = re.fullmatch(r"search apple music for (.+)", lower)
     if not match:

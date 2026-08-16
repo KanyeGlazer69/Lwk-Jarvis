@@ -51,18 +51,23 @@ if ($Playlist) {
     $selection.Select()
     Start-Sleep -Seconds 2
     $elements = Get-AllElements
-    $playButton = $null
+    $shuffleButton = $null
     for ($i = 0; $i -lt $elements.Count; $i++) {
         $element = $elements.Item($i)
         if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
-            $element.Current.Name -eq 'Play' -and $element.Current.AutomationId -eq 'PlayButton') {
-            $playButton = $element
-            break
+            $element.Current.Name -eq 'Shuffle' -and $element.Current.AutomationId -eq 'ShuffleButton') {
+            $candidateInvoke = $null
+            if ($element.TryGetCurrentPattern(
+                [System.Windows.Automation.InvokePattern]::Pattern, [ref]$candidateInvoke
+            )) {
+                $shuffleButton = $element
+                break
+            }
         }
     }
-    if (-not $playButton) { throw "The Play button for '$Query' was not found." }
+    if (-not $shuffleButton) { throw "The Shuffle button for '$Query' was not found." }
     $invoke = $null
-    $playButton.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke) | Out-Null
+    $shuffleButton.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke) | Out-Null
     $invoke.Invoke()
     Start-Sleep -Seconds 2
     $elements = Get-AllElements
@@ -70,8 +75,8 @@ if ($Playlist) {
     for ($i = 0; $i -lt [Math]::Min($elements.Count, 75); $i++) {
         if ($elements.Item($i).Current.Name -eq 'Pause') { $pauseVisible = $true; break }
     }
-    if (-not $pauseVisible) { throw "Playlist '$Query' was selected but playback was not verified." }
-    Write-Output "APPLE_MUSIC_PLAYLIST_VERIFIED: $Query"
+    if (-not $pauseVisible) { throw "Playlist '$Query' was selected but shuffled playback was not verified." }
+    Write-Output "APPLE_MUSIC_SHUFFLE_VERIFIED: $Query"
     exit 0
 }
 
