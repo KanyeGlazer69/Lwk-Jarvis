@@ -9,6 +9,7 @@ safe_cases = {
     "start file explorer": "open_file_explorer",
     "open settings": "open_settings",
     "open task manager": "open_task_manager",
+    "can you open up the calculator app for me": "open_calculator",
 }
 for phrase, expected in safe_cases.items():
     result = handle_action(phrase, dry_run=True)

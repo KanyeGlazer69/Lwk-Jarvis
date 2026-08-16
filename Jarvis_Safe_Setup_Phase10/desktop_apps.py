@@ -136,7 +136,7 @@ def _opera(transcript: str, dry_run: bool) -> Result:
     lower = transcript.lower().strip().rstrip(".?!")
     if not ("opera" in lower or "tab" in lower or lower.startswith("search ")):
         return Result(False)
-    if re.fullmatch(r"(?:open|start|launch) opera(?: gx)?", lower):
+    if re.fullmatch(r"(?:please )?(?:open|open up|start|launch) opera\s*(?:gx)?", lower):
         if not dry_run:
             subprocess.Popen([str(OPERA)])
         return Result(True, True, "opera.open", "Opening Opera GX.")
@@ -145,13 +145,13 @@ def _opera(transcript: str, dry_run: bool) -> Result:
             if not _activate("Opera"): return Result(True, False, "opera.new_tab", "Opera GX is not open.")
             _hotkey("ctrl", "t")
         return Result(True, True, "opera.new_tab", "Opening a new tab.")
-    match = re.fullmatch(r"(?:search(?: for)?|look up) (.+?)(?: (?:in|on|with) opera(?: gx)?)", lower)
+    match = re.fullmatch(r"(?:search(?: (?:for|up))?|look up|google) (.+?)(?: (?:in|on|with|using) opera\s*(?:gx)?)", lower)
     if match:
         query = match.group(1).strip()
         if not query: return Result(True, False, "opera.search", "Tell me what to search for.")
         if not dry_run: subprocess.Popen([str(OPERA), _opera_url(query)])
         return Result(True, True, "opera.search", f"Searching Opera GX for {query}.")
-    match = re.fullmatch(r"open (.+?) (?:in|on|with) opera(?: gx)?", lower)
+    match = re.fullmatch(r"(?:open|go to|navigate to) (.+?) (?:in|on|with|using) opera\s*(?:gx)?", lower)
     if match:
         target = match.group(1).strip()
         if not dry_run: subprocess.Popen([str(OPERA), _opera_url(target)])

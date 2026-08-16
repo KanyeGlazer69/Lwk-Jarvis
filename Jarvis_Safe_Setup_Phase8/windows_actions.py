@@ -27,9 +27,9 @@ APP_ALIASES = {
 }
 
 OPEN_PATTERN = re.compile(
-    r"^\s*(?:please\s+)?(?:open|launch|start)\s+(?:the\s+)?"
+    r"^\s*(?:(?:please|can you|could you|would you)\s+)?(?:open(?:\s+up)?|launch|start)\s+(?:the\s+)?"
     r"(?P<app>notepad|calculator|calc|file explorer|explorer|settings|windows settings|task manager)"
-    r"(?:\s+for\s+me)?[.!?]*\s*$",
+    r"(?:\s+(?:app|application))?(?:\s+for\s+me)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 
