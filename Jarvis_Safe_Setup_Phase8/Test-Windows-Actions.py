@@ -10,6 +10,10 @@ safe_cases = {
     "open settings": "open_settings",
     "open task manager": "open_task_manager",
     "can you open up the calculator app for me": "open_calculator",
+    "open Roblox": "open_roblox",
+    "can you launch the Roblox Player": "open_roblox",
+    "open my homework.pdf": "open_personal_file",
+    "open the file named vacation photo.jpg": "open_personal_file",
 }
 for phrase, expected in safe_cases.items():
     result = handle_action(phrase, dry_run=True)

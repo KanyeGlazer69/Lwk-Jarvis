@@ -26,7 +26,7 @@ LAST_TEXT = ROOT / "last-transcript.txt"
 LAST_REPORT = ROOT / "last-transcription.json"
 SAMPLE_RATE = 16_000
 CHUNK = 1_280  # 80 ms; the native openWakeWord frame size.
-SPEECH_MODEL_NAME = "small.en"
+SPEECH_MODEL_NAME = "distil-large-v3"
 
 
 def load_config() -> dict:

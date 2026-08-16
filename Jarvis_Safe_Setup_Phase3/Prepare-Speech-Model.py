@@ -1,4 +1,4 @@
-"""Download and load the compact English speech model used by Jarvis Phase 3."""
+"""Download and load Jarvis's high-accuracy distilled English speech model."""
 
 import pathlib
 
@@ -11,7 +11,7 @@ model_root = root / "models"
 model_root.mkdir(parents=True, exist_ok=True)
 
 model = WhisperModel(
-    "small.en",
+    "distil-large-v3",
     device="cpu",
     compute_type="int8",
     download_root=str(model_root),
@@ -25,4 +25,4 @@ segments, _ = model.transcribe(
 )
 list(segments)  # Force inference; faster-whisper returns a lazy generator.
 print(f"Speech model directory: {model_root}")
-print("LOCAL SMALL.EN SPEECH MODEL SELF-TEST PASSED")
+print("LOCAL DISTIL-LARGE-V3 SPEECH MODEL SELF-TEST PASSED")
