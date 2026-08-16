@@ -8,11 +8,13 @@ allowed = [
     "play Kanye West Flashing Lights", "play my mood playlist in Apple Music",
     "search up Microsoft on OperaGX", "google weather using Opera GX",
     "go to github.com on OperaGX", "open up OperaGX",
+    "Can't Tell Me Nothing by Kanye West", "Billie Jean by Michael Jackson",
 ]
 for phrase in allowed:
     result = handle_action(phrase, dry_run=True)
     assert result.matched and result.success, (phrase, result)
-blocked = ["delete my files", "buy this song", "enter my password", "run PowerShell", "close Opera"]
+blocked = ["delete my files", "buy this song", "enter my password", "run PowerShell", "close Opera",
+           "who was Hamlet written by", "book by Stephen King"]
 for phrase in blocked:
     assert not handle_action(phrase, dry_run=True).matched, phrase
 print("PHASE 10 COMMAND ALLOWLIST TEST PASSED")

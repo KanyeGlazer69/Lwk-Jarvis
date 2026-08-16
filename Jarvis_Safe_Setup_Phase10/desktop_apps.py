@@ -175,6 +175,13 @@ def _apple_music(transcript: str, dry_run: bool) -> Result:
     lower = transcript.lower().strip().rstrip(".?!")
     if re.fullmatch(r"i can'?t tell me nothing by (?:kanye|kanye west)", lower):
         lower = "play can't tell me nothing by kanye west"
+    bare_song = re.fullmatch(r"([^,;:]{1,80}?)\s+by\s+([^,;:]{1,60})", lower)
+    if (bare_song and not re.match(
+            r"^(?:who|what|when|where|why|how|is|was|were|are|do|does|did|book|movie|show)\b",
+            lower)):
+        title, artist = (part.strip() for part in bare_song.groups())
+        if title and artist and len(lower.split()) <= 18:
+            lower = f"play {title} by {artist}"
     if ("apple music" not in lower
             and not lower.startswith("play ")
             and not re.fullmatch(r"(?:play|pause|next|previous)(?: song| track| music)?", lower)):
