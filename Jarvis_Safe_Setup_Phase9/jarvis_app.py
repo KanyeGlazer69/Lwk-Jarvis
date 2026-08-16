@@ -31,7 +31,11 @@ class JarvisApp:
     def __init__(self, start_hidden: bool = False) -> None:
         self.root = tk.Tk()
         self.root.title("Jarvis")
-        self.root.geometry("760x520")
+        monitor = self._smallest_monitor()
+        width, height, margin = 760, 520, 28
+        x = monitor["left"] + monitor["width"] - width - margin
+        y = monitor["top"] + monitor["height"] - height - margin
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
         self.root.minsize(620, 420)
         self.root.configure(bg="#09111f")
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
@@ -42,8 +46,6 @@ class JarvisApp:
         self._build()
         self._build_transcript_popup()
         self._create_tray()
-        if start_hidden:
-            self.root.after(50, self.root.withdraw)
         self.root.after(100, self._drain_events)
         self.root.after(350, self.start)
 
@@ -83,11 +85,15 @@ class JarvisApp:
                            relief="flat", font=("Consolas", 9), state="disabled", padx=12, pady=10)
         self.log.pack(fill="both", expand=True, padx=28, pady=(0, 24))
 
-    def _build_transcript_popup(self) -> None:
-        """Pin a clean transcript overlay to the smallest connected display."""
+    @staticmethod
+    def _smallest_monitor() -> dict:
         with mss.mss() as capture:
             monitors = list(capture.monitors[1:])
-        monitor = min(monitors, key=lambda item: item["width"] * item["height"])
+        return min(monitors, key=lambda item: item["width"] * item["height"])
+
+    def _build_transcript_popup(self) -> None:
+        """Pin a clean transcript overlay to the smallest connected display."""
+        monitor = self._smallest_monitor()
         width, height, margin = 390, 118, 18
         x = monitor["left"] + monitor["width"] - width - margin
         y = monitor["top"] + monitor["height"] - height - margin

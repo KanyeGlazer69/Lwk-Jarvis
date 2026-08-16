@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Jarvis YouTube Auto Skip",
+  "version": "1.0.0",
+  "description": "Clicks YouTube Skip buttons and skips verified SponsorBlock sponsor segments.",
+  "host_permissions": ["https://www.youtube.com/*", "https://sponsor.ajay.app/*"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": ["https://www.youtube.com/*"],
+    "js": ["youtube.js"],
+    "run_at": "document_idle"
+  }]
+}
