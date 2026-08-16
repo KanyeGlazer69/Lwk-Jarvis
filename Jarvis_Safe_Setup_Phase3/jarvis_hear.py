@@ -133,6 +133,11 @@ def transcribe(model: WhisperModel, audio: np.ndarray) -> tuple[str, float]:
         vad_filter=True,
         condition_on_previous_text=False,
         without_timestamps=True,
+        initial_prompt=(
+            "Jarvis voice commands. Examples: Play Can't Tell Me Nothing by Kanye West. "
+            "Play a song in Apple Music. Play music. Pause music. Next song. "
+            "Search Google in Opera GX."
+        ),
     )
     text = clean_transcript(" ".join(segment.text.strip() for segment in segments).strip())
     return text, time.monotonic() - started
