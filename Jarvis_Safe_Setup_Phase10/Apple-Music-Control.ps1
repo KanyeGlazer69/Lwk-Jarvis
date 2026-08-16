@@ -8,6 +8,16 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Windows.Forms
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class JarvisAppleMusicMouse {
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
+    [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT point);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+}
+'@
 
 $process = Get-Process | Where-Object { $_.MainWindowTitle -match 'Apple Music' } | Select-Object -First 1
 if (-not $process) { throw 'Apple Music window not found.' }
@@ -81,7 +91,42 @@ for ($i = 0; $i -lt $elements.Count; $i++) {
     }
 }
 if (-not $track) { throw "The exact album track '$trackTitle' was not found." }
-$trackInvoke = $null
-$track.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$trackInvoke) | Out-Null
-$trackInvoke.Invoke()
-Write-Output "APPLE_MUSIC_PLAY_COMPLETE: $trackTitle"
+
+$scrollPattern = $null
+if ($track.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref]$scrollPattern)) {
+    $scrollPattern.ScrollIntoView()
+    Start-Sleep -Milliseconds 200
+}
+$bounds = $track.Current.BoundingRectangle
+if ($bounds.IsEmpty) { throw 'The exact track row is not visible.' }
+$oldCursor = New-Object JarvisAppleMusicMouse+POINT
+[JarvisAppleMusicMouse]::GetCursorPos([ref]$oldCursor) | Out-Null
+try {
+    $x = [int]($bounds.Left + ($bounds.Width / 2))
+    $y = [int]($bounds.Top + ($bounds.Height / 2))
+    [JarvisAppleMusicMouse]::SetCursorPos($x, $y) | Out-Null
+    [JarvisAppleMusicMouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    [JarvisAppleMusicMouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 120
+    [JarvisAppleMusicMouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    [JarvisAppleMusicMouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+}
+finally {
+    [JarvisAppleMusicMouse]::SetCursorPos($oldCursor.X, $oldCursor.Y) | Out-Null
+}
+
+Start-Sleep -Seconds 2
+$elements = Get-AllElements
+$pauseVisible = $false
+$titleVisible = $false
+for ($i = 0; $i -lt $elements.Count; $i++) {
+    $name = $elements.Item($i).Current.Name
+    if ($name -eq 'Pause') { $pauseVisible = $true }
+    if ($name -and $name.IndexOf($trackTitle, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        $titleVisible = $true
+    }
+}
+if (-not ($pauseVisible -and $titleVisible)) {
+    throw "Apple Music selected '$trackTitle' but playback was not verified."
+}
+Write-Output "APPLE_MUSIC_PLAYBACK_VERIFIED: $trackTitle"
