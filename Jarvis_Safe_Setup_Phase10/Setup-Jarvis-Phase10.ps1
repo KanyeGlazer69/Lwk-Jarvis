@@ -12,7 +12,7 @@ try {
     if($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'Phase 10 is intentionally non-admin.'}
     if(-not(Test-Path -LiteralPath $python -PathType Leaf)){throw 'Phase 1 is missing.'}
     New-Item -ItemType Directory -Path $phase10 -Force | Out-Null
-    foreach($name in @('desktop_apps.py','Test-Desktop-Apps.py')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $phase10 $name) -Force}
+    foreach($name in @('desktop_apps.py','Apple-Music-Control.ps1','Test-Desktop-Apps.py')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $phase10 $name) -Force}
     $brainSource=Join-Path (Split-Path $PSScriptRoot -Parent) 'Jarvis_Safe_Setup_Phase4\jarvis_brain.py'
     Copy-Item -LiteralPath $brainSource -Destination (Join-Path $phase4 'jarvis_brain.py') -Force
     Invoke-Checked 'Testing the command allowlist' $python @((Join-Path $phase10 'Test-Desktop-Apps.py'))

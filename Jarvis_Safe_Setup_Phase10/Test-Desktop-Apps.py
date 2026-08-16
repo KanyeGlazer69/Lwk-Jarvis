@@ -5,6 +5,7 @@ allowed = [
     "open youtube.com in Opera", "close the tab named YouTube in Opera",
     "close the current tab", "open Apple Music", "play music", "next song",
     "previous track", "volume up on Apple Music", "search Apple Music for Billie Jean",
+    "play Kanye West Flashing Lights",
 ]
 for phrase in allowed:
     result = handle_action(phrase, dry_run=True)
