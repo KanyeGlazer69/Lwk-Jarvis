@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import argparse
 import ctypes
+import json
 import pathlib
 import queue
 import subprocess
@@ -26,12 +27,26 @@ ROOT = pathlib.Path(os.environ["LOCALAPPDATA"]) / "Jarvis"
 RUNNER = ROOT / "Phase4" / "Run-Jarvis-Phase4.ps1"
 MUTEX_NAME = "Local\\JarvisDesktopApp-Adrian"
 MARBLE = pathlib.Path(__file__).resolve().parent / "assets" / "black-gold-marble.png"
+SETTINGS = pathlib.Path(__file__).resolve().parent / "ui-settings.json"
 BLACK = "#050505"
 PANEL = "#0b0b0d"
 GOLD = "#c9a24b"
 GOLD_BRIGHT = "#e4c56a"
 IVORY = "#f5f1e8"
 MUTED = "#aaa49a"
+THEMES = {
+    "EGO Marble": {
+        "asset": MARBLE, "black": BLACK, "panel": PANEL, "accent": GOLD,
+        "bright": GOLD_BRIGHT, "ivory": IVORY, "muted": MUTED,
+        "divider": "#332b1b", "border": "#3a3020", "active": "#201b12",
+    },
+    "Printstream": {
+        "asset": pathlib.Path(__file__).resolve().parent / "assets" / "printstream.png",
+        "black": "#050607", "panel": "#0b0d10", "accent": "#b8f5ff",
+        "bright": "#f1d8ff", "ivory": "#f7f9fb", "muted": "#9ba6b2",
+        "divider": "#202832", "border": "#68717d", "active": "#171b20",
+    },
+}
 
 
 class JarvisApp:
@@ -51,8 +66,12 @@ class JarvisApp:
         self.exiting = False
         self.tray = None
         self.resize_job = None
+        saved_theme = self._load_theme_name()
+        self.theme_name = "EGO Marble"
         self._build()
         self._build_transcript_popup()
+        if saved_theme != self.theme_name:
+            self._apply_theme(saved_theme, persist=False)
         self._create_tray()
         self.root.after(100, self._drain_events)
         self.root.after(350, self.start)
@@ -104,11 +123,68 @@ class JarvisApp:
                   bg=BLACK, fg=IVORY, activebackground="#201b12",
                   highlightthickness=1, highlightbackground=GOLD,
                   relief="flat", font=("Segoe UI", 9), cursor="hand2").pack(side="left", padx=6)
+        self.theme_var = tk.StringVar(value=self.theme_name)
+        theme_button = tk.Menubutton(buttons, textvariable=self.theme_var, width=14,
+                                     bg=BLACK, fg=IVORY, activebackground="#201b12",
+                                     highlightthickness=1, highlightbackground=GOLD,
+                                     relief="flat", font=("Segoe UI", 9), cursor="hand2")
+        self.theme_menu = tk.Menu(theme_button, tearoff=False, bg=BLACK, fg=IVORY,
+                                  activebackground=GOLD, activeforeground=BLACK)
+        for theme_name in THEMES:
+            self.theme_menu.add_command(label=theme_name,
+                                        command=lambda name=theme_name: self._apply_theme(name))
+        theme_button.configure(menu=self.theme_menu)
+        theme_button.pack(side="left", padx=6)
 
         self.log = tk.Text(self.root, height=7, bg="#080808", fg=MUTED, insertbackground=GOLD,
                            highlightthickness=1, highlightbackground="#3a3020",
                            relief="flat", font=("Consolas", 9), state="disabled", padx=12, pady=9)
         self.log.pack(fill="both", expand=True, padx=28, pady=(0, 20))
+
+    @staticmethod
+    def _load_theme_name() -> str:
+        try:
+            name = json.loads(SETTINGS.read_text(encoding="utf-8")).get("theme")
+            return name if name in THEMES else "EGO Marble"
+        except (OSError, ValueError, AttributeError):
+            return "EGO Marble"
+
+    def _apply_theme(self, name: str, persist: bool = True) -> None:
+        if name not in THEMES:
+            return
+        old = THEMES[self.theme_name]
+        new = THEMES[name]
+        replacements = {old[key]: new[key] for key in
+                        ("black", "panel", "accent", "bright", "ivory", "muted",
+                         "divider", "border", "active")}
+
+        def recolor(widget) -> None:
+            for option in ("background", "foreground", "activebackground", "activeforeground",
+                           "highlightbackground", "insertbackground"):
+                try:
+                    current = str(widget.cget(option))
+                    if current in replacements:
+                        widget.configure(**{option: replacements[current]})
+                except tk.TclError:
+                    pass
+            for child in widget.winfo_children():
+                recolor(child)
+
+        recolor(self.root)
+        recolor(self.popup)
+        self.theme_menu.configure(bg=new["black"], fg=new["ivory"],
+                                  activebackground=new["accent"], activeforeground=new["black"])
+        self.theme_name = name
+        if new["asset"].is_file():
+            self.marble_source = Image.open(new["asset"]).convert("RGB")
+            self._apply_responsive_layout()
+        self.theme_var.set(name)
+        self._set_status(self.status.get())
+        if persist:
+            try:
+                SETTINGS.write_text(json.dumps({"theme": name}, indent=2), encoding="utf-8")
+            except OSError:
+                pass
 
     def _schedule_responsive_layout(self, event) -> None:
         if event.widget is not self.root:
@@ -180,11 +256,13 @@ class JarvisApp:
     def _set_status(self, value: str) -> None:
         self.status.set(value)
         self.popup_status.set(f"JARVIS · {value}")
-        colors = {"READY": GOLD_BRIGHT, "LISTENING": IVORY, "THINKING": GOLD,
-                  "STARTING": GOLD, "OFFLINE": MUTED}
+        palette = THEMES[self.theme_name]
+        colors = {"READY": palette["bright"], "LISTENING": palette["ivory"],
+                  "THINKING": palette["accent"], "STARTING": palette["accent"],
+                  "OFFLINE": palette["muted"]}
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Label) and widget.cget("textvariable") == str(self.status):
-                widget.configure(fg=colors.get(value, GOLD))
+                widget.configure(fg=colors.get(value, palette["accent"]))
 
     def _append_log(self, line: str) -> None:
         self.log.configure(state="normal")
