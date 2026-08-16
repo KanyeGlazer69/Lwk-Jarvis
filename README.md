@@ -29,5 +29,6 @@ strictly allowlisted, but it should be reviewed and dry-run tested before live u
 
 ## Status
 
-Phases 1–10 are included. Hardware, microphone names, available Gemini models, and Windows
+Phases 1–11 are included. Phase 11 can launch Jarvis silently after Windows sign-in using
+a personal Startup shortcut, with duplicate-instance protection. Hardware, microphone names, available Gemini models, and Windows
 audio voices can differ across PCs, so validate each phase before continuing.

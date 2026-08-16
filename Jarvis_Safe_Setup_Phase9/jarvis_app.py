@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+import argparse
+import ctypes
 import pathlib
 import queue
 import subprocess
 import threading
 import tkinter as tk
 from tkinter import messagebox
+from ctypes import wintypes
 
 import mss
 
@@ -21,10 +24,11 @@ except ImportError:
 
 ROOT = pathlib.Path(os.environ["LOCALAPPDATA"]) / "Jarvis"
 RUNNER = ROOT / "Phase4" / "Run-Jarvis-Phase4.ps1"
+MUTEX_NAME = "Local\\JarvisDesktopApp-Adrian"
 
 
 class JarvisApp:
-    def __init__(self) -> None:
+    def __init__(self, start_hidden: bool = False) -> None:
         self.root = tk.Tk()
         self.root.title("Jarvis")
         self.root.geometry("760x520")
@@ -38,6 +42,8 @@ class JarvisApp:
         self._build()
         self._build_transcript_popup()
         self._create_tray()
+        if start_hidden:
+            self.root.after(50, self.root.withdraw)
         self.root.after(100, self._drain_events)
         self.root.after(350, self.start)
 
@@ -225,5 +231,34 @@ class JarvisApp:
         self.root.mainloop()
 
 
+def acquire_single_instance():
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.argtypes = (ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR)
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    handle = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+    if not handle or ctypes.get_last_error() == 183:
+        if handle:
+            kernel32.CloseHandle(handle)
+        return None
+    return handle
+
+
+def release_single_instance(handle) -> None:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle(handle)
+
+
 if __name__ == "__main__":
-    JarvisApp().run()
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--startup", action="store_true")
+    args = parser.parse_args()
+    mutex = acquire_single_instance()
+    if mutex is not None:
+        try:
+            JarvisApp(start_hidden=args.startup).run()
+        finally:
+            release_single_instance(mutex)
