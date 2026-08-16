@@ -17,7 +17,7 @@ import mss
 
 try:
     import pystray
-    from PIL import Image, ImageDraw, ImageTk
+    from PIL import Image, ImageDraw, ImageOps, ImageTk
 except ImportError:
     pystray = None
 
@@ -50,6 +50,7 @@ class JarvisApp:
         self.events: queue.Queue[tuple[str, str]] = queue.Queue()
         self.exiting = False
         self.tray = None
+        self.resize_job = None
         self._build()
         self._build_transcript_popup()
         self._create_tray()
@@ -58,9 +59,12 @@ class JarvisApp:
 
     def _build(self) -> None:
         if MARBLE.is_file():
-            texture = Image.open(MARBLE).convert("RGB").resize((760, 520), Image.Resampling.LANCZOS)
+            self.marble_source = Image.open(MARBLE).convert("RGB")
+            texture = ImageOps.fit(self.marble_source, (760, 520), Image.Resampling.LANCZOS)
             self.marble_photo = ImageTk.PhotoImage(texture)
-            tk.Label(self.root, image=self.marble_photo, borderwidth=0).place(x=0, y=0, relwidth=1, relheight=1)
+            self.background = tk.Label(self.root, image=self.marble_photo, borderwidth=0)
+            self.background.place(x=0, y=0, relwidth=1, relheight=1)
+            self.root.bind("<Configure>", self._schedule_responsive_layout)
         title = tk.Label(self.root, text="J  A  R  V  I  S", font=("Georgia", 27, "bold"),
                          fg=GOLD_BRIGHT, bg=BLACK)
         title.pack(pady=(20, 1))
@@ -75,13 +79,15 @@ class JarvisApp:
         card.pack(fill="x", padx=28)
         tk.Label(card, text="YOU", font=("Segoe UI Semibold", 8), fg=GOLD, bg=PANEL).pack(anchor="w")
         self.heard = tk.StringVar(value="Say “Hey Jarvis” when the status is Ready.")
-        tk.Label(card, textvariable=self.heard, wraplength=675, justify="left",
-                 font=("Segoe UI", 12), fg=IVORY, bg=PANEL).pack(anchor="w", pady=(4, 13))
+        self.heard_label = tk.Label(card, textvariable=self.heard, wraplength=675, justify="left",
+                                    font=("Segoe UI", 12), fg=IVORY, bg=PANEL)
+        self.heard_label.pack(anchor="w", pady=(4, 13))
         tk.Frame(card, bg="#332b1b", height=1).pack(fill="x", pady=(0, 12))
         tk.Label(card, text="JARVIS", font=("Segoe UI Semibold", 8), fg=GOLD_BRIGHT, bg=PANEL).pack(anchor="w")
         self.answer = tk.StringVar(value="Starting up…")
-        tk.Label(card, textvariable=self.answer, wraplength=675, justify="left",
-                 font=("Segoe UI", 12), fg=IVORY, bg=PANEL).pack(anchor="w", pady=(4, 0))
+        self.answer_label = tk.Label(card, textvariable=self.answer, wraplength=675, justify="left",
+                                     font=("Segoe UI", 12), fg=IVORY, bg=PANEL)
+        self.answer_label.pack(anchor="w", pady=(4, 0))
 
         buttons = tk.Frame(self.root, bg=BLACK)
         buttons.pack(pady=14)
@@ -103,6 +109,25 @@ class JarvisApp:
                            highlightthickness=1, highlightbackground="#3a3020",
                            relief="flat", font=("Consolas", 9), state="disabled", padx=12, pady=9)
         self.log.pack(fill="both", expand=True, padx=28, pady=(0, 20))
+
+    def _schedule_responsive_layout(self, event) -> None:
+        if event.widget is not self.root:
+            return
+        if self.resize_job is not None:
+            self.root.after_cancel(self.resize_job)
+        self.resize_job = self.root.after(90, self._apply_responsive_layout)
+
+    def _apply_responsive_layout(self) -> None:
+        self.resize_job = None
+        width = max(1, self.root.winfo_width())
+        height = max(1, self.root.winfo_height())
+        if hasattr(self, "marble_source"):
+            texture = ImageOps.fit(self.marble_source, (width, height), Image.Resampling.LANCZOS)
+            self.marble_photo = ImageTk.PhotoImage(texture)
+            self.background.configure(image=self.marble_photo)
+        wrap = max(500, width - 85)
+        self.heard_label.configure(wraplength=wrap)
+        self.answer_label.configure(wraplength=wrap)
 
     @staticmethod
     def _smallest_monitor() -> dict:
