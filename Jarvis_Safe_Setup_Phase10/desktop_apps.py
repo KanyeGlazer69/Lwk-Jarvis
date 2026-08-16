@@ -95,6 +95,21 @@ def _music_search(query: str, play: bool) -> bool:
     return True
 
 
+def _music_playlist(name: str) -> bool:
+    if not _ensure_apple_music() or not APPLE_MUSIC_CONTROL.is_file():
+        return False
+    command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+               str(APPLE_MUSIC_CONTROL), "-Query", name, "-Playlist"]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=30,
+                            creationflags=subprocess.CREATE_NO_WINDOW)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        if detail:
+            print(f"Apple Music playlist failed: {detail}")
+        return False
+    return True
+
+
 def _opera_url(query: str) -> str:
     cleaned = query.strip().strip(".?!")
     if re.fullmatch(r"(?:https?://)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:/[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?", cleaned, re.I):
@@ -152,6 +167,12 @@ def _apple_music(transcript: str, dry_run: bool) -> Result:
             if not _ensure_apple_music():
                 return Result(True, False, "music.open", "I couldn't open Apple Music.")
         return Result(True, True, "music.open", "Opening Apple Music.")
+    playlist_match = re.fullmatch(r"play (?:my )?(.+?) playlist(?: (?:on|in) apple music)?", lower)
+    if playlist_match:
+        playlist = playlist_match.group(1).strip()
+        if not dry_run and not _music_playlist(playlist):
+            return Result(True, False, "music.play_playlist", f"I couldn't play your {playlist} playlist.")
+        return Result(True, True, "music.play_playlist", f"Playing your {playlist} playlist.")
     play_request = False
     match = re.fullmatch(r"search apple music for (.+)", lower)
     if not match:

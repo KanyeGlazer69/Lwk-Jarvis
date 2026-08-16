@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Query,
-    [switch]$Play
+    [switch]$Play,
+    [switch]$Playlist
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,52 @@ $trueCondition = [System.Windows.Automation.Condition]::TrueCondition
 
 function Get-AllElements {
     $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $trueCondition)
+}
+
+if ($Playlist) {
+    $elements = Get-AllElements
+    $libraryPlaylist = $null
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        $element = $elements.Item($i)
+        $patterns = $element.GetSupportedPatterns()
+        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::ListItem -and
+            $element.Current.Name -ieq $Query -and
+            $patterns -contains [System.Windows.Automation.SelectionItemPattern]::Pattern -and
+            $patterns -notcontains [System.Windows.Automation.InvokePattern]::Pattern) {
+            $libraryPlaylist = $element
+            break
+        }
+    }
+    if (-not $libraryPlaylist) { throw "The Library playlist '$Query' was not found." }
+    $selection = $null
+    $libraryPlaylist.TryGetCurrentPattern(
+        [System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection
+    ) | Out-Null
+    $selection.Select()
+    Start-Sleep -Seconds 2
+    $elements = Get-AllElements
+    $playButton = $null
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        $element = $elements.Item($i)
+        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+            $element.Current.Name -eq 'Play' -and $element.Current.AutomationId -eq 'PlayButton') {
+            $playButton = $element
+            break
+        }
+    }
+    if (-not $playButton) { throw "The Play button for '$Query' was not found." }
+    $invoke = $null
+    $playButton.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke) | Out-Null
+    $invoke.Invoke()
+    Start-Sleep -Seconds 2
+    $elements = Get-AllElements
+    $pauseVisible = $false
+    for ($i = 0; $i -lt [Math]::Min($elements.Count, 75); $i++) {
+        if ($elements.Item($i).Current.Name -eq 'Pause') { $pauseVisible = $true; break }
+    }
+    if (-not $pauseVisible) { throw "Playlist '$Query' was selected but playback was not verified." }
+    Write-Output "APPLE_MUSIC_PLAYLIST_VERIFIED: $Query"
+    exit 0
 }
 
 $elements = Get-AllElements
