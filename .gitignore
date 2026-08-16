@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.dpapi
+*.db
+*.db-shm
+*.db-wal
+.env
+last-exchange.json
+last-response.txt
+models/
+*.dmp
+*.log
+
