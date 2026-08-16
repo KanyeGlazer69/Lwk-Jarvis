@@ -110,6 +110,21 @@ def _music_playlist(name: str) -> bool:
     return True
 
 
+def _music_playback(action: str) -> bool:
+    if not _ensure_apple_music() or not APPLE_MUSIC_CONTROL.is_file():
+        return False
+    command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+               str(APPLE_MUSIC_CONTROL), "-PlaybackAction", action.title()]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=15,
+                            creationflags=subprocess.CREATE_NO_WINDOW)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        if detail:
+            print(f"Apple Music playback failed: {detail}")
+        return False
+    return True
+
+
 def _opera_url(query: str) -> str:
     cleaned = query.strip().strip(".?!")
     if re.fullmatch(r"(?:https?://)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:/[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?", cleaned, re.I):
@@ -195,6 +210,10 @@ def _apple_music(transcript: str, dry_run: bool) -> Result:
         if not dry_run:
             if not _ensure_apple_music():
                 return Result(True, False, f"music.{action.replace(' ', '_')}", "I couldn't open Apple Music.")
+            if action in ("play", "pause"):
+                if not _music_playback(action):
+                    return Result(True, False, f"music.{action}", f"I couldn't {action} Apple Music.")
+                return Result(True, True, f"music.{action}", f"Apple Music is now {action}ing.")
             shortcuts = {
                 "play pause": ("ctrl", "space"), "play": ("ctrl", "space"),
                 "pause": ("ctrl", "space"), "next": ("ctrl", "right"),

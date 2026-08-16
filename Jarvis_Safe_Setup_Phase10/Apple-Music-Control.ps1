@@ -1,8 +1,9 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$Query,
+    [string]$Query = '',
     [switch]$Play,
-    [switch]$Playlist
+    [switch]$Playlist,
+    [ValidateSet('Play', 'Pause')][string]$PlaybackAction
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +28,42 @@ $trueCondition = [System.Windows.Automation.Condition]::TrueCondition
 
 function Get-AllElements {
     $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $trueCondition)
+}
+
+if ($PlaybackAction) {
+    $elements = Get-AllElements
+    $wantedButtonName = if ($PlaybackAction -eq 'Play') { 'Play' } else { 'Pause' }
+    $alreadyCorrectName = if ($PlaybackAction -eq 'Play') { 'Pause' } else { 'Play' }
+    $wantedButton = $null
+    $alreadyCorrect = $false
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        $element = $elements.Item($i)
+        if ($element.Current.ControlType -ne [System.Windows.Automation.ControlType]::Button) { continue }
+        if ($element.Current.Name -eq $alreadyCorrectName) { $alreadyCorrect = $true }
+        if ($element.Current.Name -eq $wantedButtonName) {
+            $candidateInvoke = $null
+            if ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$candidateInvoke)) {
+                $wantedButton = $element
+                break
+            }
+        }
+    }
+    if (-not $alreadyCorrect) {
+        if (-not $wantedButton) { throw "Apple Music's $wantedButtonName button was not found." }
+        $invoke = $null
+        $wantedButton.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke) | Out-Null
+        $invoke.Invoke()
+        Start-Sleep -Milliseconds 700
+    }
+    $elements = Get-AllElements
+    $verifiedName = if ($PlaybackAction -eq 'Play') { 'Pause' } else { 'Play' }
+    $verified = $false
+    for ($i = 0; $i -lt $elements.Count; $i++) {
+        if ($elements.Item($i).Current.Name -eq $verifiedName) { $verified = $true; break }
+    }
+    if (-not $verified) { throw "Apple Music did not verify the $PlaybackAction state." }
+    Write-Output "APPLE_MUSIC_STATE_VERIFIED: $PlaybackAction"
+    exit 0
 }
 
 if ($Playlist) {
